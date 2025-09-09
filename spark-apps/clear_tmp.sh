@@ -1,0 +1,1 @@
+rm -rf /tmp/spark_wordcount_checkpoint

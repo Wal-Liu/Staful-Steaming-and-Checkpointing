@@ -1,0 +1,228 @@
+These are tasks that simply could not be accomplished 5 or 10 years ago. When peo‐
+ple say that we live in an age of “big data,” they mean that we have tools for collecting,
+storing, and processing information at a scale previously unheard of. Sitting behind
+these capabilities is an ecosystem of open source software that can leverage clusters of
+commodity computers to chug through massive amounts of data. Distributed systems
+like Apache Hadoop have found their way into the mainstream and have seen wide‐
+spread deployment at organizations in nearly every field.
+But just as a chisel and a block of stone do not make a statue, there is a gap between
+having access to these tools and all this data, and doing something useful with it. This
+is where “data science” comes in. As sculpture is the practice of turning tools and raw
+material into something relevant to nonsculptors, data science is the practice of turn‐
+ing tools and raw data into something that nondata scientists might care about.
+Often, “doing something useful” means placing a schema over it and using SQL to
+answer questions like “of the gazillion users who made it to the third page in our
+1
+registration process, how many are over 25?” The field of how to structure a data
+warehouse and organize information to make answering these kinds of questions
+easy is a rich one, but we will mostly avoid its intricacies in this book.
+Sometimes, “doing something useful” takes a little extra. SQL still may be core to the
+approach, but to work around idiosyncrasies in the data or perform complex analysis,
+we need a programming paradigm that’s a little bit more flexible and a little closer to
+the ground, and with richer functionality in areas like machine learning and statistics.
+These are the kinds of analyses we are going to talk about in this book.
+For a long time, open source frameworks like R, the PyData stack, and Octave have
+made rapid analysis and model building viable over small data sets. With fewer than
+10 lines of code, we can throw together a machine learning model on half a data set
+and use it to predict labels on the other half. With a little more effort, we can impute
+missing data, experiment with a few models to find the best one, or use the results of
+a model as inputs to fit another. What should an equivalent process look like that can
+leverage clusters of computers to achieve the same outcomes on huge data sets?
+The right approach might be to simply extend these frameworks to run on multiple
+machines, to retain their programming models and rewrite their guts to play well in
+distributed settings. However, the challenges of distributed computing require us to
+rethink many of the basic assumptions that we rely on in single-node systems. For
+example, because data must be partitioned across many nodes on a cluster, algorithms
+that have wide data dependencies will suffer from the fact that network transfer rates
+are orders of magnitude slower than memory accesses. As the number of machines
+working on a problem increases, the probability of a failure increases. These facts
+require a programming paradigm that is sensitive to the characteristics of the under‐
+lying system: one that discourages poor choices and makes it easy to write code that
+will execute in a highly parallel manner.
+Of course, single-machine tools like PyData and R that have come to recent promi‐
+nence in the software community are not the only tools used for data analysis. Scien‐
+tific fields like genomics that deal with large data sets have been leveraging parallel
+computing frameworks for decades. Most people processing data in these fields today
+are familiar with a cluster-computing environment called HPC (high-performance
+computing). Where the difficulties with PyData and R lie in their inability to scale,
+the difficulties with HPC lie in its relatively low level of abstraction and difficulty of
+use. For example, to process a large file full of DNA sequencing reads in parallel, we
+must manually split it up into smaller files and submit a job for each of those files to
+the cluster scheduler. If some of these fail, the user must detect the failure and take
+care of manually resubmitting them. If the analysis requires all-to-all operations like
+sorting the entire data set, the large data set must be streamed through a single node,
+or the scientist must resort to lower-level distributed frameworks like MPI, which are
+difficult to program without extensive knowledge of C and distributed/networked
+systems. Tools written for HPC environments often fail to decouple the in-memory
+data models from the lower-level storage models. For example, many tools only know
+how to read data from a POSIX filesystem in a single stream, making it difficult to
+make tools naturally parallelize, or to use other storage backends, like databases.
+Recent systems in the Hadoop ecosystem provide abstractions that allow users to
+treat a cluster of computers more like a single computer—to automatically split up
+files and distribute storage over many machines, to automatically divide work into
+smaller tasks and execute them in a distributed manner, and to automatically recover
+from failures. The Hadoop ecosystem can automate a lot of the hassle of working
+with large data sets, and is far cheaper than HPC.
+The Challenges of Data Science
+A few hard truths come up so often in the practice of data science that evangelizing
+these truths has become a large role of the data science team at Cloudera. For a sys‐
+tem that seeks to enable complex analytics on huge data to be successful, it needs to
+be informed by, or at least not conflict with, these truths.
+First, the vast majority of work that goes into conducting successful analyses lies in
+preprocessing data. Data is messy, and cleansing, munging, fusing, mushing, and
+many other verbs are prerequisites to doing anything useful with it. Large data sets in
+particular, because they are not amenable to direct examination by humans, can
+require computational methods to even discover what preprocessing steps are
+required. Even when it comes time to optimize model performance, a typical data
+pipeline requires spending far more time in feature engineering and selection than in
+choosing and writing algorithms.
+For example, when building a model that attempts to detect fraudulent purchases on
+a website, the data scientist must choose from a wide variety of potential features: any
+fields that users are required to fill out, IP location info, login times, and click logs as
+users navigate the site. Each of these comes with its own challenges in converting to
+vectors fit for machine learning algorithms. A system needs to support more flexible
+transformations than turning a 2D array of doubles into a mathematical model.
+Second, iteration is a fundamental part of the data science. Modeling and analysis typ‐
+ically require multiple passes over the same data. One aspect of this lies within
+machine learning algorithms and statistical procedures. Popular optimization proce‐
+dures like stochastic gradient descent and expectation maximization involve repeated
+scans over their inputs to reach convergence. Iteration also matters within the data
+scientist’s own workflow. When data scientists are initially investigating and trying to
+get a feel for a data set, usually the results of a query inform the next query that
+should run. When building models, data scientists do not try to get it right in one try.
+Choosing the right features, picking the right algorithms, running the right signifi‐
+cance tests, and finding the right hyperparameters all require experimentation. A
+The Challenges of Data Science | 3
+www.it-ebooks.info
+framework that requires reading the same data set from disk each time it is accessed
+adds delay that can slow down the process of exploration and limit the number of
+things we get to try.
+Third, the task isn’t over when a well-performing model has been built. If the point of
+data science is making data useful to nondata scientists, then a model stored as a list
+of regression weights in a text file on the data scientist’s computer has not really
+accomplished this goal. Uses of data recommendation engines and real-time fraud
+detection systems culminate in data applications. In these, models become part of a
+production service and may need to be rebuilt periodically or even in real time.
+For these situations, it is helpful to make a distinction between analytics in the lab
+and analytics in the factory. In the lab, data scientists engage in exploratory analytics.
+They try to understand the nature of the data they are working with. They visualize it
+and test wild theories. They experiment with different classes of features and auxiliary
+sources they can use to augment it. They cast a wide net of algorithms in the hopes
+that one or two will work. In the factory, in building a data application, data scientists
+engage in operational analytics. They package their models into services that can
+inform real-world decisions. They track their models’ performance over time and
+obsess about how they can make small tweaks to squeeze out another percentage
+point of accuracy. They care about SLAs and uptime. Historically, exploratory analyt‐
+ics typically occurs in languages like R, and when it comes time to build production
+applications, the data pipelines are rewritten entirely in Java or C++.
+Of course, everybody could save time if the original modeling code could be actually
+used in the app for which it is written, but languages like R are slow and lack integra‐
+tion with most planes of the production infrastructure stack, and languages like Java
+and C++ are just poor tools for exploratory analytics. They lack Read-Evaluate-Print
+Loop (REPL) environments for playing with data interactively and require large
+amounts of code to express simple transformations. A framework that makes model‐
+ing easy but is also a good fit for production systems is a huge win.
+Introducing Apache Spark
+Enter Apache Spark, an open source framework that combines an engine for distrib‐
+uting programs across clusters of machines with an elegant model for writing pro‐
+grams atop it. Spark, which originated at the UC Berkeley AMPLab and has since
+been contributed to the Apache Software Foundation, is arguably the first open
+source software that makes distributed programming truly accessible to data
+scientists.
+One illuminating way to understand Spark is in terms of its advances over its prede‐
+cessor, MapReduce. MapReduce revolutionized computation over huge data sets by
+offering a simple model for writing programs that could execute in parallel across
+hundreds to thousands of machines. The MapReduce engine achieves near linear
+scalability—as the data size increases, we can throw more computers at it and see jobs
+complete in the same amount of time—and is resilient to the fact that failures that
+occur rarely on a single machine occur all the time on clusters of thousands. It breaks
+up work into small tasks and can gracefully accommodate task failures without com‐
+promising the job to which they belong.
+Spark maintains MapReduce’s linear scalability and fault tolerance, but extends it in
+three important ways. First, rather than relying on a rigid map-then-reduce format,
+its engine can execute a more general directed acyclic graph (DAG) of operators. This
+means that, in situations where MapReduce must write out intermediate results to the
+distributed filesystem, Spark can pass them directly to the next step in the pipeline. In
+this way, it is similar to Dryad, a descendant of MapReduce that originated at Micro‐
+soft Research. Second, it complements this capability with a rich set of transforma‐
+tions that enable users to express computation more naturally. It has a strong
+developer focus and streamlined API that can represent complex pipelines in a few
+lines of code.
+Third, Spark extends its predecessors with in-memory processing. Its Resilient Dis‐
+tributed Dataset (RDD) abstraction enables developers to materialize any point in a
+processing pipeline into memory across the cluster, meaning that future steps that
+want to deal with the same data set need not recompute it or reload it from disk. This
+capability opens up use cases that distributed processing engines could not previously
+approach. Spark is well suited for highly iterative algorithms that require multiple
+passes over a data set, as well as reactive applications that quickly respond to user
+queries by scanning large in-memory data sets.
+Perhaps most importantly, Spark fits well with the aforementioned hard truths of data
+science, acknowledging that the biggest bottleneck in building data applications is not
+CPU, disk, or network, but analyst productivity. It perhaps cannot be overstated how
+much collapsing the full pipeline, from preprocessing to model evaluation, into a sin‐
+gle programming environment can speed up development. By packaging an expres‐
+sive programming model with a set of analytic libraries under a REPL, it avoids the
+round trips to IDEs required by frameworks like MapReduce and the challenges of
+subsampling and moving data back and forth from HDFS required by frameworks
+like R. The more quickly analysts can experiment with their data, the higher likeli‐
+hood they have of doing something useful with it.
+With respect to the pertinence of munging and ETL, Spark strives to be something
+closer to the Python of big data than the Matlab of big data. As a general-purpose
+computation engine, its core APIs provide a strong foundation for data transforma‐
+tion independent of any functionality in statistics, machine learning, or matrix alge‐
+bra. Its Scala and Python APIs allow programming in expressive general-purpose
+languages, as well as access to existing libraries.
+Spark’s in-memory caching makes it ideal for iteration both at the micro and macro
+level. Machine learning algorithms that make multiple passes over their training set
+can cache it in memory. When exploring and getting a feel for a data set, data scien‐
+tists can keep it in memory while they run queries, and easily cache transformed ver‐
+sions of it as well without suffering a trip to disk.
+Last, Spark spans the gap between systems designed for exploratory analytics and sys‐
+tems designed for operational analytics. It is often quoted that a data scientist is
+someone who is better at engineering than most statisticians and better at statistics
+than most engineers. At the very least, Spark is better at being an operational system
+than most exploratory systems and better for data exploration than the technologies
+commonly used in operational systems. It is built for performance and reliability
+from the ground up. Sitting atop the JVM, it can take advantage of many of the
+operational and debugging tools built for the Java stack.
+Spark boasts strong integration with the variety of tools in the Hadoop ecosystem. It
+can read and write data in all of the data formats supported by MapReduce, allowing
+it to interact with the formats commonly used to store data on Hadoop like Avro and
+Parquet (and good old CSV). It can read from and write to NoSQL databases like
+HBase and Cassandra. Its stream processing library, Spark Streaming, can ingest data
+continuously from systems like Flume and Kafka. Its SQL library, SparkSQL, can
+interact with the Hive Metastore, and a project that is in progress at the time of this
+writing seeks to enable Spark to be used as an underlying execution engine for Hive,
+as an alternative to MapReduce. It can run inside YARN, Hadoop’s scheduler and
+resource manager, allowing it to share cluster resources dynamically and to be man‐
+aged with the same policies as other processing engines like MapReduce and Impala.
+Of course, Spark isn’t all roses and petunias. While its core engine has progressed in
+maturity even during the span of this book being written, it is still young compared to
+MapReduce and hasn’t yet surpassed it as the workhorse of batch processing. Its spe‐
+cialized subcomponents for stream processing, SQL, machine learning, and graph
+processing lie at different stages of maturity and are undergoing large API upgrades.
+For example, MLlib’s pipelines and transformer API model is in progress while this
+book is being written. Its statistics and modeling functionality comes nowhere near
+that of single machine languages like R. Its SQL functionality is rich, but still lags far
+behind that of Hive.
+About This Book
+The rest of this book is not going to be about Spark’s merits and disadvantages. There
+are a few other things that it will not be either. It will introduce the Spark program‐
+ming model and Scala basics, but it will not attempt to be a Spark reference or pro‐
+vide a comprehensive guide to all its nooks and crannies. It will not try to be a machine learning, statistics, or linear algebra reference, although many of the chap‐
+ters will provide some background on these before using them.
+Instead, it will try to help the reader get a feel for what it’s like to use Spark for com‐
+plex analytics on large data sets. It will cover the entire pipeline: not just building and
+evaluating models, but cleansing, preprocessing, and exploring data, with attention
+paid to turning results into production applications. We believe that the best way to
+teach this is by example, so, after a quick chapter describing Spark and its ecosystem,
+the rest of the chapters will be self-contained illustrations of what it looks like to use
+Spark for analyzing data from different domains.
+When possible, we will attempt not to just provide a “solution,” but to demonstrate
+the full data science workflow, with all of its iterations, dead ends, and restarts. This
+book will be useful for getting more comfortable with Scala, more comfortable with
+Spark, and more comfortable with machine learning and data analysis. However,
+these are in service of a larger goal, and we hope that most of all, this book will teach
+you how to approach tasks like those described at the beginning of this chapter. Each
+chapter, in about 20 measly pages, will try to get as close as possible to demonstrating
+how to build one of these pieces of data applications.
