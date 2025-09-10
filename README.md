@@ -22,7 +22,7 @@ docker exec -it stateful-spark-master /opt/spark/bin/spark-submit /opt/spark-app
 
 4. Kết quả mong đợi 
 
-![alt text](image.png)
+![alt text](img/image.png)
 
 
 5. Dọn dẹp Docker Compose Stack sau khi hoàn thành: 
