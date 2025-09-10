@@ -1,6 +1,7 @@
 services:
   spark-master:
     image: apache/spark:3.4.4
+    container_name: stateful-spark-master
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     ports:
       - "7077:7077"
