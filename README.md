@@ -8,10 +8,10 @@
 docker-compose up --build -d
 ```
 
-2. Chạy file `send_text.py` để chuẩn bị TCP socket server
+2. Chạy file `send_text.py` để chuẩn bị TCP socket server trong container `producer`
 
 ``` 
-python send_text.py
+docker exec -it stateful-producer python send_text.py
 ```
 
 3. Xử lý dữ liệu với Spark

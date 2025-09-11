@@ -2,7 +2,7 @@ from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 
 # ====== CẤU HÌNH ======
-HOST = "host.docker.internal"
+HOST = "producer"
 PORT = 9999
 BATCH_INTERVAL = 1  # giây
 CHECKPOINT_DIR = "file:///tmp/spark_linecount_checkpoint"

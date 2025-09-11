@@ -1,6 +1,7 @@
 services:
   spark-master:
     image: apache/spark:3.4.4
+    user: root
     container_name: stateful-spark-master
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     ports:
@@ -12,9 +13,9 @@ services:
       - ./spark-apps:/opt/spark-apps
     working_dir: /opt/spark-apps
 
-
   spark-worker:
     image: apache/spark:3.4.4
+    user: root
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
       - spark-master
@@ -24,3 +25,13 @@ services:
       SPARK_MODE: worker
     volumes:
       - ./spark-apps:/opt/spark-apps
+
+  producer:
+    image: python:3.11-slim
+    container_name: stateful-producer
+    user: root
+    volumes:
+      - ./producer:/app
+    working_dir: /app
+    command: bash -c "while true; do python /app/producer.py > /dev/null 2>&1; sleep 1; done"  # Redirect output to /dev/null
+    restart: always  # Ensure the container restarts if it stops

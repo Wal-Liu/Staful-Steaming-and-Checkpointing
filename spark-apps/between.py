@@ -3,7 +3,7 @@ from pyspark.streaming import StreamingContext
 import time  # Để lấy timestamp
 
 # ====== CẤU HÌNH ======
-HOST = "host.docker.internal"
+HOST = "producer"
 PORT = 9999
 BATCH_INTERVAL = 1  # giây
 CHECKPOINT_DIR = "file:///tmp/spark_avg_interval_checkpoint"

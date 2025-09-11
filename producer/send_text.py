@@ -12,7 +12,7 @@ from pathlib import Path
 import random
 
 # ================== CẤU HÌNH ==================
-HOST = "127.0.0.1"        # Địa chỉ localhost
+HOST = "0.0.0.0"        # Địa chỉ localhost
 PORT = 9999               # Cổng để Spark kết nối
 INTERVAL_SEC = 5        # Gửi mỗi 0.5 giây
 TEXT_FILE = "sample_text.txt"  # File chứa dữ liệu text (mỗi dòng = 1 message)
