@@ -9,6 +9,7 @@ import socket
 import time
 import threading
 from pathlib import Path
+import random
 
 # ================== CẤU HÌNH ==================
 HOST = "127.0.0.1"        # Địa chỉ localhost
@@ -37,7 +38,8 @@ def handle_client(conn, addr):
                 conn.sendall((line + "\n").encode("utf-8"))
                 count += 1
                 print(f"[{count}] Sent: {line}")
-                time.sleep(INTERVAL_SEC)
+                delay = random.uniform(0.5, 5)
+                time.sleep(delay)
             if not LOOP_FOREVER:
                 break
     except (BrokenPipeError, ConnectionResetError):
