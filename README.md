@@ -1,4 +1,4 @@
-# Staful Steaming and Checkpointing
+# Stateful Steaming and Checkpointing
 
 # Hướng dẫn sử dụng demo
 
